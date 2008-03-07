@@ -22,11 +22,12 @@
 " Author: Hosup Chung <hosup.chung@gmail.com>
 "
 " Created:      2008 March 6
-" Last Updated: 2008 March 6
+" Last Updated: 2008 March 7
 "
-" Version: 0.10
-" 0.10: initial upload
+" Version: 0.12
+" 0.12: fixed problem of not scrolling at long single line
 " 0.11: add silent to exe command
+" 0.10: initial upload
 "------------------------------------------------------------------------------
 " Install:
 " Copy this script in your plugin directory
@@ -55,7 +56,7 @@ if exists("g:smooth_page_scroll")
 	finish
 endif
 
-let g:smooth_page_scroll="0.10"
+let g:smooth_page_scroll="0.12"
 
 " save 'cpoptions'
 if 1
@@ -78,6 +79,8 @@ function! SmoothPageScrollDown()
 			let newTopLine = line("w$") - 1
 		endif
 
+		silent! exe "norm! " . s:scrolldown
+
 		while newTopLine > line("w0")
 			silent! exe "norm! " . s:scrolldown
 			redraw
@@ -94,11 +97,15 @@ function! SmoothPageScrollUp()
 	if line("w0") > 1
 		" newLastLine is the last row's line number of the window after scroll.
 		" but it's only a guesstimate value.
-		if line("w0") == line("$") || (line("w$") - line("w0")) < 3
+		if line("w0") == line("w$") && line("w0") > 1 && line("w$") != line("$")
+			let newLastLine = line("w0") - 1
+		elseif line("w0") == line("$") || (line("w$") - line("w0")) < 3
 			let newLastLine = line("w0")
 		else
 			let newLastLine = line("w0") + 1
 		endif
+
+		silent! exe "norm! " . s:scrollup
 
 		while line("w0") > 1 && newLastLine <= line("w$")
 			silent! exe "norm! " . s:scrollup
