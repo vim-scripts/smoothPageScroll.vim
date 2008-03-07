@@ -24,7 +24,8 @@
 " Created:      2008 March 6
 " Last Updated: 2008 March 7
 "
-" Version: 0.12
+" Version: 0.13
+" 0.13: temporary fix for infinite scrolling attempt on folded line
 " 0.12: fixed problem of not scrolling at long single line
 " 0.11: add silent to exe command
 " 0.10: initial upload
@@ -56,7 +57,7 @@ if exists("g:smooth_page_scroll")
 	finish
 endif
 
-let g:smooth_page_scroll="0.12"
+let g:smooth_page_scroll="0.13"
 
 " save 'cpoptions'
 if 1
@@ -82,8 +83,16 @@ function! SmoothPageScrollDown()
 		silent! exe "norm! " . s:scrolldown
 
 		while newTopLine > line("w0")
+			let previousTopLine = line("w0")
+
 			silent! exe "norm! " . s:scrolldown
-			redraw
+
+			" scroll didn't happen. something is wrong
+			if previousTopLine == line("w0")
+				break
+			else
+				redraw
+			endif
 		endwhile
 
 		" move the cursor to the proper line
@@ -108,9 +117,14 @@ function! SmoothPageScrollUp()
 		silent! exe "norm! " . s:scrollup
 
 		while line("w0") > 1 && newLastLine <= line("w$")
+			let previousTopLine = line("w0")
+
 			silent! exe "norm! " . s:scrollup
 
-			if newLastLine <= line("w$")
+			if previousTopLine == line("w0")
+				" scroll didn't happen. something is wrong
+				break
+			elseif newLastLine <= line("w$")
 				redraw
 			else
 				" we scrolled too much. reverse one line
