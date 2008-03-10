@@ -22,12 +22,13 @@
 " Author: Hosup Chung <hosup.chung@gmail.com>
 "
 " Created:      2008 March 6
-" Last Updated: 2008 March 7
+" Last Updated: 2008 March 10
 "
-" Version: 0.13
+" Version: 0.20
+" 0.20: added a function to delay scroll speed
 " 0.13: temporary fix for infinite scrolling attempt on folded line
 " 0.12: fixed problem of not scrolling at long single line
-" 0.11: add silent to exe command
+" 0.11: added silent to exe command
 " 0.10: initial upload
 "------------------------------------------------------------------------------
 " Install:
@@ -47,17 +48,22 @@
 " programs such as web browsers or acrobat reader use space key to scroll page. 
 " 	map <Space>   :call SmoothPageScrollDown()<CR>
 " 	map <S-Space> :call SmoothPageScrollUp()<CR>
-"
 " But remapping <S-Space> may not work on certain console or platform. So you 
 " might have to find another candidate, such as <M-Space>, <C-Space> or 
 " something else.
+"
+" If the scrolling speed is too fast, you can delay scrolling speed more by 
+" adding g:smooth_page_scroll_delay in your [._]vimrc. Following line will 
+" delay extra 5 milliseconds per each line.
+"
+" let g:smooth_page_scroll_delay = 5
 "------------------------------------------------------------------------------
 
 if exists("g:smooth_page_scroll")
 	finish
 endif
 
-let g:smooth_page_scroll="0.13"
+let g:smooth_page_scroll="v0.20"
 
 " save 'cpoptions'
 if 1
@@ -65,8 +71,22 @@ if 1
 endif
 set cpo&vim
 
-let s:scrolldown = "\<C-E>"
-let s:scrollup   = "\<C-Y>"
+if !exists("g:smooth_page_scroll_delay")
+	let g:smooth_page_scroll_delay = 0
+endif
+
+function! s:ScrollOneLineDown()
+	silent! exe "norm! \<C-E>"
+endfunction
+
+function! s:ScrollOneLineUp()
+	silent! exe "norm! \<C-Y>"
+endfunction
+
+function! s:Redraw()
+	silent! exe "sleep " . g:smooth_page_scroll_delay . "m"
+	redraw
+endfunction
 
 function! SmoothPageScrollDown()
 	if line("$") > line("w0") 
@@ -80,18 +100,18 @@ function! SmoothPageScrollDown()
 			let newTopLine = line("w$") - 1
 		endif
 
-		silent! exe "norm! " . s:scrolldown
+		call s:ScrollOneLineDown()
 
 		while newTopLine > line("w0")
 			let previousTopLine = line("w0")
 
-			silent! exe "norm! " . s:scrolldown
+			call s:ScrollOneLineDown()
 
-			" scroll didn't happen. something is wrong
 			if previousTopLine == line("w0")
+				" scroll didn't happen. something is wrong
 				break
 			else
-				redraw
+				call s:Redraw()
 			endif
 		endwhile
 
@@ -106,7 +126,7 @@ function! SmoothPageScrollUp()
 	if line("w0") > 1
 		" newLastLine is the last row's line number of the window after scroll.
 		" but it's only a guesstimate value.
-		if line("w0") == line("w$") && line("w0") > 1 && line("w$") != line("$")
+		if line("w0") == line("w$") && line("w$") != line("$")
 			let newLastLine = line("w0") - 1
 		elseif line("w0") == line("$") || (line("w$") - line("w0")) < 3
 			let newLastLine = line("w0")
@@ -114,21 +134,21 @@ function! SmoothPageScrollUp()
 			let newLastLine = line("w0") + 1
 		endif
 
-		silent! exe "norm! " . s:scrollup
+		call s:ScrollOneLineUp()
 
 		while line("w0") > 1 && newLastLine <= line("w$")
 			let previousTopLine = line("w0")
 
-			silent! exe "norm! " . s:scrollup
+			call s:ScrollOneLineUp()
 
 			if previousTopLine == line("w0")
 				" scroll didn't happen. something is wrong
 				break
 			elseif newLastLine <= line("w$")
-				redraw
+				call s:Redraw()
 			else
 				" we scrolled too much. reverse one line
-				silent! exe "norm! " . s:scrolldown
+				call s:ScrollOneLineDown()
 				break
 			endif
 		endwhile
